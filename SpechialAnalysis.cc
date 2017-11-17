@@ -102,6 +102,15 @@ void SpechialAnalysis::analyze() {
   
   fill_particle(0);
   
+  vector<string>::iterator isobool =find(a->_Tau->pstats["Tau1"].bset.begin(),a->_Tau->pstats["Tau1"].bset.end(),"DoDiscrByIsolation");
+  if(isobool!=a->_Tau->pstats["Tau1"].bset.end()){
+    a->_Tau->pstats["Tau1"].bset.erase(isobool);
+  }
+  a->active_part->at(CUTS::eRTau1)->clear();
+  a->getGoodRecoLeptons(*a->_Tau, CUTS::eRTau1, CUTS::eGTau, a->_Tau->pstats["Tau1"],0);
+  //restore current version
+  a->_Tau->pstats["Tau1"].bset.push_back("DoDiscrByIsolation");
+  
   make_TTLAna();
   make_tau_tree();
   
@@ -110,12 +119,6 @@ void SpechialAnalysis::analyze() {
 
 void SpechialAnalysis::make_tau_tree() {
   
-  vector<string>::iterator isobool =find(a->_Tau->pstats["Tau1"].bset.begin(),a->_Tau->pstats["Tau1"].bset.end(),"DoDiscrByIsolation");
-  if(isobool!=a->_Tau->pstats["Tau1"].bset.end()){
-    a->_Tau->pstats["Tau1"].bset.erase(isobool);
-  }
-  a->getGoodRecoLeptons(*a->_Tau, CUTS::eRTau1, CUTS::eGTau, a->_Tau->pstats["Tau1"],0);
-  a->_Tau->pstats["Tau1"].bset.push_back("DoDiscrByIsolation");
   
   int j1      = -1;
   int j2      = -1;
@@ -161,6 +164,10 @@ void SpechialAnalysis::make_tau_tree() {
       isotau++;
     else
       non_isotau++;
+  }
+  if(isotau==0){
+    //we do not care about these:
+    return;
   }
   zTauTree["tau_n"]       = iitau;
   zTauTree["tauIso_n"]    = isotau;
@@ -233,17 +240,12 @@ void SpechialAnalysis::make_tau_tree() {
 
 void SpechialAnalysis::make_TTLAna() {
   
-  vector<string>::iterator isobool =find(a->_Tau->pstats["Tau1"].bset.begin(),a->_Tau->pstats["Tau1"].bset.end(),"DoDiscrByIsolation");
+  
   //for(string i :  a->_Tau->pstats["Tau1"].bset ){
     //cout<<i<<endl;
   //}
   
-  if(isobool!=a->_Tau->pstats["Tau1"].bset.end()){
-    a->_Tau->pstats["Tau1"].bset.erase(isobool);
-  }
-  a->active_part->at(CUTS::eRTau1)->clear();
-  a->getGoodRecoLeptons(*a->_Tau, CUTS::eRTau1, CUTS::eGTau, a->_Tau->pstats["Tau1"],0);
-  a->_Tau->pstats["Tau1"].bset.push_back("DoDiscrByIsolation");
+  
   
   
   
