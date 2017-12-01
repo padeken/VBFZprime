@@ -285,6 +285,20 @@ namespace HistClass {
                 trees[name]->Branch(it->first.c_str(), &(it->second), Form("%s/F", it->first.c_str()));
         }
     }
+    /*! \brief Function to create one Tree in the TTree map
+     *
+     * \param[in] m Map of the name and variable that should be matched to each branch
+     * \param[in] name Name of the TTree that should be created
+     */
+    SUPPRESS_NOT_USED_WARN static void CreateTree(std::unordered_map< std::string , float > *m, std::unordered_map< std::string , std::vector<float>* > *mv, const char * name) {
+        trees[name] = new TTree(name, name);
+        for (std::unordered_map< std::string , float >::iterator it = m->begin(); it != m->end(); it++) {
+                trees[name]->Branch(it->first.c_str(), &(it->second), Form("%s/F", it->first.c_str()));
+        }
+        for (std::unordered_map< std::string , std::vector<float>* >::iterator it = mv->begin(); it != mv->end(); it++) {
+                trees[name]->Branch(it->first.c_str(), it->second);
+        }
+    }
 
     /*! \brief Function to add a branch to one Tree in the TTree map
      *

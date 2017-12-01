@@ -15,6 +15,7 @@ public:
   void fill_particle(int);
   void make_tau_tree();
   void make_TTLAna();
+  int getGoodLeptonCombosForQCD(Lepton& lep1, Lepton& lep2, CUTS ePos1, CUTS ePos2, CUTS ePosFin, const PartStats& stats, const int syst);
 
 private:
   Analyzer* a;
@@ -24,6 +25,10 @@ private:
   Particle* particles[3];
   const int nstage;
   unordered_map< string,float > zTauTree;
+  unordered_map< string,vector<float>* > zTauTreeV;
+  TH2D* ttl_rato_one;
+  TH2D* ttl_rato_two;
+  Histogramer sphisto;
 };
 
 #endif
