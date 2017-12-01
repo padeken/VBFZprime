@@ -139,6 +139,15 @@ void SpechialAnalysis::analyze() {
   double backup_wgt=a->wgt;
   const vector<string>* groups = sphisto.get_groups();
   
+  vector<int> jet1_backup;
+  vector<int> jet2_backup;
+  for(int ijet : *a->active_part->at(CUTS::eRJet1)){
+    jet1_backup.push_back(ijet);
+  }
+  for(int ijet : *a->active_part->at(CUTS::eRJet2)){
+    jet2_backup.push_back(ijet);
+  }
+  
   isobool =find(a->_Tau->pstats["Tau1"].bset.begin(),a->_Tau->pstats["Tau1"].bset.end(),"DoDiscrByIsolation");
   if(isobool!=a->_Tau->pstats["Tau1"].bset.end()){
     a->_Tau->pstats["Tau1"].bset.erase(isobool);
@@ -181,6 +190,19 @@ void SpechialAnalysis::analyze() {
   }
   a->wgt*= ttl_weight;
   
+  a->active_part->at(CUTS::eRJet1)->clear();
+  for(int ijet : jet1_backup){
+    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
+      a->active_part->at(CUTS::eRJet1)->push_back(ijet);
+    }
+  }
+  a->active_part->at(CUTS::eRJet2)->clear();
+  for(int ijet : jet2_backup){
+    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
+      a->active_part->at(CUTS::eRJet2)->push_back(ijet);
+    }
+  }
+  
   a->fillCuts(false);
   for(auto it: *groups) {
     a->fill_Folder(it, a->maxCut, sphisto, false);
@@ -191,6 +213,15 @@ void SpechialAnalysis::analyze() {
   a->_MET->setCurrentP(0);
   a->active_part = &(a->goodParts);
   //make_tau_tree();
+  
+  a->active_part->at(CUTS::eRJet1)->clear();
+  for(int ijet : jet1_backup){
+    a->active_part->at(CUTS::eRJet1)->push_back(ijet);
+  }
+  a->active_part->at(CUTS::eRJet2)->clear();
+  for(int ijet : jet2_backup){
+    a->active_part->at(CUTS::eRJet2)->push_back(ijet);
+  }
   
 
 }
