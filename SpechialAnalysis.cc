@@ -48,47 +48,51 @@ void SpechialAnalysis::init() {
   
 
   zTauTreeV["tau_pt"]       = new vector<float>;
+  zTauTreeV["tau_lpt"]       = new vector<float>;
   zTauTreeV["tau_eta"]      = new vector<float>;
   zTauTreeV["tau_phi"]      = new vector<float>;
   zTauTreeV["tau_charge"]   = new vector<float>;
   zTauTreeV["tau_cosDphi"]      = new vector<float>;
   zTauTreeV["tau_mt"]       = new vector<float>;
   zTauTreeV["tau_iso"]      = new vector<float>;
- 
-  zTauTreeV["tau_noiso_pt"]       = new vector<float>;
-  zTauTreeV["tau_noiso_eta"]      = new vector<float>;
-  zTauTreeV["tau_noiso_phi"]      = new vector<float>;
-  zTauTreeV["tau_noiso_charge"]   = new vector<float>;
-  zTauTreeV["tau_noiso_cosDphi"]      = new vector<float>;
-  zTauTreeV["tau_noiso_mt"]       = new vector<float>;
-  zTauTreeV["tau_noiso_iso"]      = new vector<float>;
+  zTauTreeV["tau_dz"]      = new vector<float>;
+  zTauTreeV["tau_mass"]      = new vector<float>;
+  
+  //zTauTreeV["tau_noiso_pt"]       = new vector<float>;
+  //zTauTreeV["tau_noiso_eta"]      = new vector<float>;
+  //zTauTreeV["tau_noiso_phi"]      = new vector<float>;
+  //zTauTreeV["tau_noiso_charge"]   = new vector<float>;
+  //zTauTreeV["tau_noiso_cosDphi"]      = new vector<float>;
+  //zTauTreeV["tau_noiso_mt"]       = new vector<float>;
+  //zTauTreeV["tau_noiso_iso"]      = new vector<float>;
   
   
-  zTauTree["tau_n"]          =0;
-  zTauTree["tauIso_n"]       =0;
-  zTauTree["tauNonIso_n"]    =0;
+  //zTauTree["tau_n"]          =0;
+  //zTauTree["tauIso_n"]       =0;
+  //zTauTree["tauNonIso_n"]    =0;
   
   zTauTree["met"]           = 0;
-  zTauTree["muo1_pt"]       = 0;
-  zTauTree["muo1_eta"]      = 0;
-  zTauTree["muo1_phi"]      = 0;
-  zTauTree["muo1_charge"]   = 0;
-  zTauTree["mt_muo1"]       = 0;
-  zTauTree["ele1_pt"]       = 0;
-  zTauTree["ele1_eta"]      = 0;
-  zTauTree["ele1_phi"]      = 0;
-  zTauTree["ele1_charge"]   = 0;
-  zTauTree["mt_ele1"]       = 0;
-  zTauTree["jet_n"]         = 0;
-  zTauTree["jet1_pt"]       = 0;
-  zTauTree["jet1_eta"]      = 10;
-  zTauTree["jet1_phi"]      = 10;
-  zTauTree["jet2_pt"]       = 0;
-  zTauTree["jet2_eta"]      = 10;
-  zTauTree["jet2_phi"]      = 10;
-  zTauTree["b_jet_n"]       = 0;
-  zTauTree["b_jet_pt"]      = 0;
-  zTauTree["jet_mass"]      = 0;
+  zTauTree["met_phi"]           = 0;
+  //zTauTree["muo1_pt"]       = 0;
+  //zTauTree["muo1_eta"]      = 0;
+  //zTauTree["muo1_phi"]      = 0;
+  //zTauTree["muo1_charge"]   = 0;
+  //zTauTree["mt_muo1"]       = 0;
+  //zTauTree["ele1_pt"]       = 0;
+  //zTauTree["ele1_eta"]      = 0;
+  //zTauTree["ele1_phi"]      = 0;
+  //zTauTree["ele1_charge"]   = 0;
+  //zTauTree["mt_ele1"]       = 0;
+  //zTauTree["jet_n"]         = 0;
+  //zTauTree["jet1_pt"]       = 0;
+  //zTauTree["jet1_eta"]      = 10;
+  //zTauTree["jet1_phi"]      = 10;
+  //zTauTree["jet2_pt"]       = 0;
+  //zTauTree["jet2_eta"]      = 10;
+  //zTauTree["jet2_phi"]      = 10;
+  //zTauTree["b_jet_n"]       = 0;
+  //zTauTree["b_jet_pt"]      = 0;
+  //zTauTree["jet_mass"]      = 0;
   zTauTree["weight"]        = 0;
   
   HistClass::CreateTree(&zTauTree,&zTauTreeV,"TauIsoTree");
@@ -134,7 +138,7 @@ void SpechialAnalysis::analyze() {
   a->_Tau->pstats["Tau1"].bset.push_back("DoDiscrByIsolation");
   
   make_TTLAna();
-
+  make_tau_tree();
 
   double backup_wgt=a->wgt;
   const vector<string>* groups = sphisto.get_groups();
@@ -192,13 +196,13 @@ void SpechialAnalysis::analyze() {
   
   a->active_part->at(CUTS::eRJet1)->clear();
   for(int ijet : jet1_backup){
-    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
+    if(a->_Tau->p4(p1).DeltaR(a->_Jet->p4(ijet))>0.3){
       a->active_part->at(CUTS::eRJet1)->push_back(ijet);
     }
   }
   a->active_part->at(CUTS::eRJet2)->clear();
   for(int ijet : jet2_backup){
-    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
+    if(a->_Tau->p4(p2).DeltaR(a->_Jet->p4(ijet))>0.3){
       a->active_part->at(CUTS::eRJet2)->push_back(ijet);
     }
   }
@@ -229,115 +233,129 @@ void SpechialAnalysis::analyze() {
 void SpechialAnalysis::make_tau_tree() {
   
   
-  int j1      = -1;
-  int j2      = -1;
-  double mass = 0;
-  for (auto it : *a->active_part->at(CUTS::eDiJet)) {
-    int j1tmp = (it) / a->_Jet->size();
-    int j2tmp = (it) % a->_Jet->size();
-    if (a->diParticleMass(a->_Jet->p4(j1tmp), a->_Jet->p4(j2tmp), "") > mass) {
-      j1   = j1tmp;
-      j2   = j2tmp;
-      mass = a->diParticleMass(a->_Jet->p4(j1tmp), a->_Jet->p4(j2tmp), "");
-    }
-  }
+  //int j1      = -1;
+  //int j2      = -1;
+  //double mass = 0;
+  //for (auto it : *a->active_part->at(CUTS::eDiJet)) {
+    //int j1tmp = (it) / a->_Jet->size();
+    //int j2tmp = (it) % a->_Jet->size();
+    //if (a->diParticleMass(a->_Jet->p4(j1tmp), a->_Jet->p4(j2tmp), "") > mass) {
+      //j1   = j1tmp;
+      //j2   = j2tmp;
+      //mass = a->diParticleMass(a->_Jet->p4(j1tmp), a->_Jet->p4(j2tmp), "");
+    //}
+  //}
   
   for(auto &myv : zTauTreeV){
     myv.second->clear();
   }
-  
-  for(size_t jpart =0; jpart<a->active_part->at(CUTS::eRTau1)->size(); jpart++ ){
-    int itau = a->active_part->at(CUTS::eRTau1)->at(jpart);
-    //if(a->_Tau->minIso.first->at(itau)<0.5){
-      //continue;
-    //}
-    
-    if(a->_Tau->maxIso.first->at(itau)>0.5){
-      zTauTreeV["tau_pt"]->push_back(a->_Tau->pt(itau));
-      zTauTreeV["tau_eta"]->push_back(a->_Tau->eta(itau));
-      zTauTreeV["tau_phi"]->push_back(a->_Tau->phi(itau));
-      zTauTreeV["tau_charge"]->push_back(a->_Tau->charge(itau));
-      zTauTreeV["tau_cosDphi"]->push_back(absnormPhi(a->_Tau->phi(itau) - a->_MET->phi()));
-      zTauTreeV["tau_mt"]->push_back(a->calculateLeptonMetMt(a->_Tau->p4(itau)));
-      zTauTreeV["tau_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
-    }else{
-      zTauTreeV["tau_noiso_pt"]->push_back(a->_Tau->pt(itau));
-      zTauTreeV["tau_noiso_eta"]->push_back(a->_Tau->eta(itau));
-      zTauTreeV["tau_noiso_phi"]->push_back(a->_Tau->phi(itau));
-      zTauTreeV["tau_noiso_charge"]->push_back(a->_Tau->charge(itau));
-      zTauTreeV["tau_noiso_cosDphi"]->push_back(absnormPhi(a->_Tau->phi(itau) - a->_MET->phi()));
-      zTauTreeV["tau_noiso_mt"]->push_back(a->calculateLeptonMetMt(a->_Tau->p4(itau)));
-      zTauTreeV["tau_noiso_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
+  vector<int> selTaus;
+  for(size_t itau =0; itau<a->_Tau->size(); itau++ ){
+    if(a->_Tau->leadChargedCandPt->at(itau)<70 or a->_Tau->chargedIsoPtSum->at(itau)/a->_Tau->leadChargedCandPt->at(itau)>0.03 or a->_Tau->leadChargedCandDz_pv->at(itau)>0.01 ){
+      continue;
     }
+    if(a->isOverlaping(a->_Tau->p4(itau), *a->_Muon, CUTS::eRMuon1, 0.3)){
+      continue;
+    }
+    if(a->isOverlaping(a->_Tau->p4(itau), *a->_Electron, CUTS::eRElec1, 0.3)){
+      continue;
+    }
+    zTauTreeV["tau_pt"]->push_back(a->_Tau->pt(itau));
+    zTauTreeV["tau_lpt"]->push_back(a->_Tau->leadChargedCandPt->at(itau));
+    zTauTreeV["tau_eta"]->push_back(a->_Tau->eta(itau));
+    zTauTreeV["tau_phi"]->push_back(a->_Tau->phi(itau));
+    zTauTreeV["tau_charge"]->push_back(a->_Tau->charge(itau));
+    zTauTreeV["tau_cosDphi"]->push_back(absnormPhi(a->_Tau->phi(itau) - a->_MET->phi()));
+    zTauTreeV["tau_mt"]->push_back(a->calculateLeptonMetMt(a->_Tau->p4(itau)));
+    zTauTreeV["tau_chiso"]->push_back(a->_Tau->chargedIsoPtSum->at(itau));
+    zTauTreeV["tau_neutiso"]->push_back(a->_Tau->neutralIsoPtSum->at(itau));
+    zTauTreeV["tau_puiso"]->push_back(a->_Tau->puCorrPtSum->at(itau));
+    
+    
+    zTauTreeV["tau_dz"]->push_back(a->_Tau->leadChargedCandDz_pv->at(itau));
+    selTaus.push_back(itau);
+    
   }
-  if( (zTauTreeV["tau_pt"]->size() +zTauTreeV["tau_noiso_pt"]->size()) ==2){
-    ////we do not care about these:
+  //if( (zTauTreeV["tau_pt"]->size() +zTauTreeV["tau_noiso_pt"]->size()) ==2){
+    //////we do not care about these:
+    //return;
+  //}
+  if( (zTauTreeV["tau_pt"]->size() <2) or (zTauTreeV["tau_pt"]->size() >4) ){
     return;
+  }
+  for(int itau : selTaus){
+    for(int jtau : selTaus){
+      if(itau>=jtau){
+        continue;
+      }
+      zTauTreeV["tau_mass"]->push_back((a->_Tau->p4(itau)+a->_Tau->p4(jtau)).M());
+    }
   }
   //zTauTree["tau_n"]       = iitau;
   //zTauTree["tauIso_n"]    = isotau;
   //zTauTree["tauNonIso_n"] = non_isotau;
   zTauTree["met"]       = a->_MET->pt();
+  zTauTree["met_phi"]       = a->_MET->phi();
   
   
-  if(a->active_part->at(CUTS::eRMuon1)->size()>0){
-    int imuo=a->active_part->at(CUTS::eRMuon1)->at(0);
-    zTauTree["muo1_pt"]       = a->_Muon->pt(imuo);
-    zTauTree["muo1_eta"]      = a->_Muon->eta(imuo);
-    zTauTree["muo1_phi"]      = a->_Muon->phi(imuo);
-    zTauTree["muo1_charge"]   = a->_Muon->charge(imuo);
-    zTauTree["mt_muo1"]       = a->calculateLeptonMetMt(a->_Muon->p4(imuo));
+  //if(a->active_part->at(CUTS::eRMuon1)->size()>0){
+    //int imuo=a->active_part->at(CUTS::eRMuon1)->at(0);
+    //zTauTree["muo1_pt"]       = a->_Muon->pt(imuo);
+    //zTauTree["muo1_eta"]      = a->_Muon->eta(imuo);
+    //zTauTree["muo1_phi"]      = a->_Muon->phi(imuo);
+    //zTauTree["muo1_charge"]   = a->_Muon->charge(imuo);
+    //zTauTree["mt_muo1"]       = a->calculateLeptonMetMt(a->_Muon->p4(imuo));
     
-  }else{
-    zTauTree["muo1_pt"]       = 0;
-    zTauTree["muo1_eta"]      = 0;
-    zTauTree["muo1_phi"]      = 0;
-    zTauTree["muo1_charge"]   = 0;
-    zTauTree["mt_muo1"]       = 0;
-  }
-  if(a->active_part->at(CUTS::eRElec1)->size()>0){
-    int iele=a->active_part->at(CUTS::eRElec1)->at(0);
-    zTauTree["ele1_pt"]       = a->_Electron->pt(iele);
-    zTauTree["ele1_eta"]      = a->_Electron->eta(iele);
-    zTauTree["ele1_phi"]      = a->_Electron->phi(iele);
-    zTauTree["ele1_charge"]   = a->_Electron->charge(iele);
-    zTauTree["mt_ele1"]       = a->calculateLeptonMetMt(a->_Electron->p4(iele));
-  }else{
-    zTauTree["ele1_pt"]       = 0;
-    zTauTree["ele1_eta"]      = 0;
-    zTauTree["ele1_phi"]      = 0;
-    zTauTree["ele1_charge"]   = 0;
-    zTauTree["mt_ele1"]       = 0;
-  }
+  //}else{
+    //zTauTree["muo1_pt"]       = 0;
+    //zTauTree["muo1_eta"]      = 0;
+    //zTauTree["muo1_phi"]      = 0;
+    //zTauTree["muo1_charge"]   = 0;
+    //zTauTree["mt_muo1"]       = 0;
+  //}
+  //if(a->active_part->at(CUTS::eRElec1)->size()>0){
+    //int iele=a->active_part->at(CUTS::eRElec1)->at(0);
+    //zTauTree["ele1_pt"]       = a->_Electron->pt(iele);
+    //zTauTree["ele1_eta"]      = a->_Electron->eta(iele);
+    //zTauTree["ele1_phi"]      = a->_Electron->phi(iele);
+    //zTauTree["ele1_charge"]   = a->_Electron->charge(iele);
+    //zTauTree["mt_ele1"]       = a->calculateLeptonMetMt(a->_Electron->p4(iele));
+  //}else{
+    //zTauTree["ele1_pt"]       = 0;
+    //zTauTree["ele1_eta"]      = 0;
+    //zTauTree["ele1_phi"]      = 0;
+    //zTauTree["ele1_charge"]   = 0;
+    //zTauTree["mt_ele1"]       = 0;
+  //}
   
-  zTauTree["jet_n"]   = a->active_part->at(CUTS::eRJet1)->size();
-  if(j1>=0){
-    zTauTree["jet1_pt"]   = a->_Jet->pt(j1);
-    zTauTree["jet1_eta"]  = a->_Jet->eta(j1);
-    zTauTree["jet1_phi"]  = a->_Jet->phi(j1);
-  }else{
-    zTauTree["jet1_pt"]   = 0;
-    zTauTree["jet1_eta"]  = 10;
-    zTauTree["jet1_phi"]  = 10;
-  }
-  if(j2>=0){
-    zTauTree["jet2_pt"]   = a->_Jet->pt(j2);
-    zTauTree["jet2_eta"]  = a->_Jet->eta(j2);
-    zTauTree["jet2_phi"]  = a->_Jet->phi(j2);
-  }else{           
-    zTauTree["jet2_pt"]   = 0;
-    zTauTree["jet2_eta"]  = 10;
-    zTauTree["jet2_phi"]  = 10;
-  }
+  //zTauTree["jet_n"]   = a->active_part->at(CUTS::eRJet1)->size();
+  //if(j1>=0){
+    //zTauTree["jet1_pt"]   = a->_Jet->pt(j1);
+    //zTauTree["jet1_eta"]  = a->_Jet->eta(j1);
+    //zTauTree["jet1_phi"]  = a->_Jet->phi(j1);
+  //}else{
+    //zTauTree["jet1_pt"]   = 0;
+    //zTauTree["jet1_eta"]  = 10;
+    //zTauTree["jet1_phi"]  = 10;
+  //}
+  //if(j2>=0){
+    //zTauTree["jet2_pt"]   = a->_Jet->pt(j2);
+    //zTauTree["jet2_eta"]  = a->_Jet->eta(j2);
+    //zTauTree["jet2_phi"]  = a->_Jet->phi(j2);
+  //}else{           
+    //zTauTree["jet2_pt"]   = 0;
+    //zTauTree["jet2_eta"]  = 10;
+    //zTauTree["jet2_phi"]  = 10;
+  //}
   
-  zTauTree["b_jet_n"] = a->active_part->at(CUTS::eRBJet)->size();
-  if(a->active_part->at(CUTS::eRBJet)->size()>0){
-    int ibjet=a->active_part->at(CUTS::eRBJet)->at(0);
-    zTauTree["b_jet_pt"]   = a->_Jet->pt(ibjet);
-  }else{
-    zTauTree["b_jet_pt"]   = 0;
-  }
-  zTauTree["jet_mass"]  = mass;
+  //zTauTree["b_jet_n"] = a->active_part->at(CUTS::eRBJet)->size();
+  //if(a->active_part->at(CUTS::eRBJet)->size()>0){
+    //int ibjet=a->active_part->at(CUTS::eRBJet)->at(0);
+    //zTauTree["b_jet_pt"]   = a->_Jet->pt(ibjet);
+  //}else{
+    //zTauTree["b_jet_pt"]   = 0;
+  //}
+  //zTauTree["jet_mass"]  = mass;
   zTauTree["weight"]    = a->wgt;
   
   HistClass::FillTree("TauIsoTree");
