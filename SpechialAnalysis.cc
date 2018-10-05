@@ -1,8 +1,11 @@
+// This code is written in C++
+//#include function references the header files that contain C function declarations and macro definitions; contains definitions of functions and variables 
 #include "SpechialAnalysis.h"
 #include "HistClass.h"
 #include <TFile.h>
 #include <Compression.h>
 
+//#define makes substitutions in the file. So, whenever there is an instance of BIG_NUM, it replaces that "macro name" with the replacement string, i.e. 46340 
 #define BIG_NUM 46340
 
 SpechialAnalysis::SpechialAnalysis(Analyzer* _a):nstage(9) {
@@ -53,7 +56,7 @@ void SpechialAnalysis::init() {
   zTauTreeV["tau_charge"]   = new vector<float>;
   zTauTreeV["tau_cosDphi"]      = new vector<float>;
   zTauTreeV["tau_mt"]       = new vector<float>;
-  zTauTreeV["tau_iso"]      = new vector<float>;
+  //zTauTreeV["tau_iso"]      = new vector<float>;
  
   zTauTreeV["tau_noiso_pt"]       = new vector<float>;
   zTauTreeV["tau_noiso_eta"]      = new vector<float>;
@@ -61,7 +64,7 @@ void SpechialAnalysis::init() {
   zTauTreeV["tau_noiso_charge"]   = new vector<float>;
   zTauTreeV["tau_noiso_cosDphi"]      = new vector<float>;
   zTauTreeV["tau_noiso_mt"]       = new vector<float>;
-  zTauTreeV["tau_noiso_iso"]      = new vector<float>;
+  //zTauTreeV["tau_noiso_iso"]      = new vector<float>;
   
   
   zTauTree["tau_n"]          =0;
@@ -122,17 +125,24 @@ void SpechialAnalysis::analyze() {
     return;
   if(a->active_part->at(a->cut_num.at("NRecoVertex"))->size()==0 )
     return;
+
+  //Fill particles with zero stage (the stages are numbered; code fills in stages)
   
   fill_particle(0);
+
+  // Remove isolation criteria
+
   vector<string>::iterator isobool =find(a->_Tau->pstats["Tau1"].bset.begin(),a->_Tau->pstats["Tau1"].bset.end(),"DoDiscrByIsolation");
   if(isobool!=a->_Tau->pstats["Tau1"].bset.end()){
     a->_Tau->pstats["Tau1"].bset.erase(isobool);
   }
   a->active_part->at(CUTS::eRTau1)->clear();
+  // Re-runs tau identification without isolation
   a->getGoodRecoLeptons(*a->_Tau, CUTS::eRTau1, CUTS::eGTau, a->_Tau->pstats["Tau1"],0);
   //restore current version
   a->_Tau->pstats["Tau1"].bset.push_back("DoDiscrByIsolation");
   
+  //Makes tight-to-loos
   make_TTLAna();
 
 
@@ -166,6 +176,8 @@ void SpechialAnalysis::analyze() {
   //restore current version
   a->_Tau->pstats["Tau2"].bset.push_back("DoDiscrByIsolation");
 
+  make_tau_tree();
+
   a->active_part->at(CUTS::eDiTau)->clear();
   int tau_combo_type=getGoodLeptonCombosForQCD(*a->_Tau, *a->_Tau, CUTS::eRTau1, CUTS::eRTau2, CUTS::eDiTau, a->distats["DiTau"],0);
   if(tau_combo_type==0 or a->active_part->at(CUTS::eDiTau)->size()!=1){
@@ -192,13 +204,13 @@ void SpechialAnalysis::analyze() {
   
   a->active_part->at(CUTS::eRJet1)->clear();
   for(int ijet : jet1_backup){
-    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
-      a->active_part->at(CUTS::eRJet1)->push_back(ijet);
+    if(a->_Tau->p4(p1).DeltaR(a->_Jet->p4(ijet))>0.3  or a->_Tau->p4(p2).DeltaR(a->_Jet->p4(ijet))>0.3){
+       a->active_part->at(CUTS::eRJet1)->push_back(ijet);
     }
   }
   a->active_part->at(CUTS::eRJet2)->clear();
   for(int ijet : jet2_backup){
-    if(a->_Tau->p4(pt1).DeltaR(a->_Jet->p4(ijet))>0.3){
+    if(a->_Tau->p4(p1).DeltaR(a->_Jet->p4(ijet))>0.3  or a->_Tau->p4(p2).DeltaR(a->_Jet->p4(ijet))>0.3){ 
       a->active_part->at(CUTS::eRJet2)->push_back(ijet);
     }
   }
@@ -227,7 +239,7 @@ void SpechialAnalysis::analyze() {
 }
 
 void SpechialAnalysis::make_tau_tree() {
-  
+
   
   int j1      = -1;
   int j2      = -1;
@@ -240,10 +252,12 @@ void SpechialAnalysis::make_tau_tree() {
       j2   = j2tmp;
       mass = a->diParticleMass(a->_Jet->p4(j1tmp), a->_Jet->p4(j2tmp), "");
     }
+
   }
   
   for(auto &myv : zTauTreeV){
     myv.second->clear();
+
   }
   
   for(size_t jpart =0; jpart<a->active_part->at(CUTS::eRTau1)->size(); jpart++ ){
@@ -251,6 +265,7 @@ void SpechialAnalysis::make_tau_tree() {
     //if(a->_Tau->minIso.first->at(itau)<0.5){
       //continue;
     //}
+
     
     if(a->_Tau->maxIso.first->at(itau)>0.5){
       zTauTreeV["tau_pt"]->push_back(a->_Tau->pt(itau));
@@ -259,7 +274,7 @@ void SpechialAnalysis::make_tau_tree() {
       zTauTreeV["tau_charge"]->push_back(a->_Tau->charge(itau));
       zTauTreeV["tau_cosDphi"]->push_back(absnormPhi(a->_Tau->phi(itau) - a->_MET->phi()));
       zTauTreeV["tau_mt"]->push_back(a->calculateLeptonMetMt(a->_Tau->p4(itau)));
-      zTauTreeV["tau_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
+      //zTauTreeV["tau_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
     }else{
       zTauTreeV["tau_noiso_pt"]->push_back(a->_Tau->pt(itau));
       zTauTreeV["tau_noiso_eta"]->push_back(a->_Tau->eta(itau));
@@ -267,16 +282,22 @@ void SpechialAnalysis::make_tau_tree() {
       zTauTreeV["tau_noiso_charge"]->push_back(a->_Tau->charge(itau));
       zTauTreeV["tau_noiso_cosDphi"]->push_back(absnormPhi(a->_Tau->phi(itau) - a->_MET->phi()));
       zTauTreeV["tau_noiso_mt"]->push_back(a->calculateLeptonMetMt(a->_Tau->p4(itau)));
-      zTauTreeV["tau_noiso_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
+      //zTauTreeV["tau_noiso_iso"]->push_back(a->_Tau->maxIso.first->at(itau));
     }
+
   }
-  if( (zTauTreeV["tau_pt"]->size() +zTauTreeV["tau_noiso_pt"]->size()) ==2){
+  if(zTauTreeV["tau_pt"]->size() + zTauTreeV["tau_noiso_pt"]->size() <2){
+     return;
+  }
+  //if( (zTauTreeV["tau_pt"]->size() +zTauTreeV["tau_noiso_pt"]->size()) ==2){
     ////we do not care about these:
-    return;
-  }
+    //cout<<"PROBLEM 1"<<endl;
+    //return;
+
+  //}
   //zTauTree["tau_n"]       = iitau;
-  //zTauTree["tauIso_n"]    = isotau;
-  //zTauTree["tauNonIso_n"] = non_isotau;
+  zTauTree["tauIso_n"]    = zTauTreeV["tau_pt"]->size();
+  zTauTree["tauNonIso_n"] = zTauTreeV["tau_noiso_pt"]->size();
   zTauTree["met"]       = a->_MET->pt();
   
   
@@ -341,10 +362,11 @@ void SpechialAnalysis::make_tau_tree() {
   zTauTree["weight"]    = a->wgt;
   
   HistClass::FillTree("TauIsoTree");
+  //cout<<"PROBLEM 2"<<endl;
 }
 
 void SpechialAnalysis::make_TTLAna() {
-  
+ 
   
   //for(string i :  a->_Tau->pstats["Tau1"].bset ){
     //cout<<i<<endl;
@@ -512,7 +534,7 @@ void SpechialAnalysis::make_TTLAna() {
 }
 
 void SpechialAnalysis::fill_particle(int stage) {
-  
+
   
   for (unsigned int ipart = 0; ipart < 3; ipart++) {
     HistClass::Fill(stage, (particle_names[ipart]+"_num").c_str(),a->active_part->at(cuts[ipart])->size(),a->wgt);
@@ -531,7 +553,8 @@ void SpechialAnalysis::fill_particle(int stage) {
 }
 void SpechialAnalysis::end_run() {
   sphisto.fill_histogram("QCD");
-  
+
+
   TFile* outfile = new TFile(a->histo.outname.c_str(), "UPDATE", a->histo.outname.c_str(), ROOT::CompressionSettings(ROOT::kLZMA, 9));
   
   outfile->cd();
